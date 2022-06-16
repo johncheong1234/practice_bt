@@ -1,6 +1,6 @@
 import numpy as np
 class Solution:
-    def CRR_method(self, K,T,S0,r,N,sigma,opttype='C'):
+    def European_CRR_method(self, K,T,S0,r,N,sigma,opttype='C'):
     #precomute constants
         dt = T/N
         u = np.exp(sigma*np.sqrt(dt))
@@ -71,6 +71,35 @@ class Solution:
                     
         return C[0]
 
+    def american_fast_tree(self, K,T,S0,r,N,opttype='P'):
+        #precompute values
+        dt = T/N
+        u = np.exp(sigma*np.sqrt(dt))
+        d = 1/u
+        q = (np.exp(r*dt) - d)/(u-d)
+        disc = np.exp(-r*dt)
+        
+        # initialise stock prices at maturity
+        S = S0 * d**(np.arange(N,-1,-1)) * u**(np.arange(0,N+1,1))
+            
+        # option payoff 
+        if opttype == 'P':
+            C = np.maximum(0, K - S)
+        else:
+            C = np.maximum(0, S - K)
+        
+        # backward recursion through the tree
+        for i in np.arange(N-1,-1,-1):
+            S = S0 * d**(np.arange(i,-1,-1)) * u**(np.arange(0,i+1,1))
+            C[:i+1] = disc * ( q*C[1:i+2] + (1-q)*C[0:i+1] )
+            C = C[:-1]
+            if opttype == 'P':
+                C = np.maximum(C, K - S)
+            else:
+                C = np.maximum(C, S - K)
+                    
+        return C[0]
+
 s = Solution();
 K = 100;
 T = 1;
@@ -79,6 +108,8 @@ r = 0.05;
 N = 10;
 sigma = 0.2;
 
-print(s.CRR_method(K,T,S0,r,N,sigma,opttype='C'))
+print(s.European_CRR_method(K,T,S0,r,N,sigma,opttype='C'))
 print()
 print(s.american_slow_tree(K,T,S0,r,N,sigma,opttype='C'))
+print()
+print(s.american_fast_tree(K,T,S0,r,N,opttype='C'))
